@@ -2,6 +2,7 @@ package sshpool
 
 import (
 	"code.google.com/p/go.crypto/ssh"
+	"log"
 	"net"
 	"strconv"
 	"sync"
@@ -90,6 +91,9 @@ func (p *Pool) getConn(k, net, addr string, config *ssh.ClientConfig) *conn {
 	c.wg.Add(1)
 	deadline := time.Now().Add(p.Timeout)
 	c.netC, c.c, c.err = p.dial(net, addr, config, deadline)
+	if c.err != nil {
+		log.Print("sshpool: error dialing: ", c.err)
+	}
 	p.mu.Unlock()
 	c.wg.Done()
 	return c
