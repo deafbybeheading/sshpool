@@ -38,17 +38,15 @@ var DefaultPool = new(Pool)
 // connection. If dialing fails, Open returns the error from Dial.
 func (p *Pool) Open(net, addr string, config *ssh.ClientConfig) (*ssh.Session, error) {
 	var deadline time.Time
-	if p.Timeout > 0 {
-		deadline = time.Now().Add(p.Timeout)
-	}
 	k := p.key(net, addr, config)
 	for {
-		c := p.getConn(k, net, addr, config, deadline)
+		c := p.getConn(k, net, addr, config)
 		if c.err != nil {
 			p.removeConn(k, c)
 			return nil, c.err
 		}
 		if p.Timeout > 0 {
+			deadline = time.Now().Add(p.Timeout)
 			c.netC.SetDeadline(deadline)
 		}
 		s, err := c.c.NewSession()
@@ -76,7 +74,7 @@ type conn struct {
 
 // getConn gets an ssh connection from the pool for key.
 // If none is available, it dials anew.
-func (p *Pool) getConn(k, net, addr string, config *ssh.ClientConfig, deadline time.Time) *conn {
+func (p *Pool) getConn(k, net, addr string, config *ssh.ClientConfig) *conn {
 	p.mu.Lock()
 	if p.tab == nil {
 		p.tab = make(map[string]*conn)
@@ -90,6 +88,7 @@ func (p *Pool) getConn(k, net, addr string, config *ssh.ClientConfig, deadline t
 	c = new(conn)
 	p.tab[k] = c
 	c.wg.Add(1)
+	deadline := time.Now().Add(p.Timeout)
 	c.netC, c.c, c.err = p.dial(net, addr, config, deadline)
 	p.mu.Unlock()
 	c.wg.Done()
