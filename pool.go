@@ -90,8 +90,8 @@ func (p *Pool) getConn(k, net, addr string, config *ssh.ClientConfig, deadline t
 	c = new(conn)
 	p.tab[k] = c
 	c.wg.Add(1)
-	p.mu.Unlock()
 	c.netC, c.c, c.err = p.dial(net, addr, config, deadline)
+	p.mu.Unlock()
 	c.wg.Done()
 	return c
 }
