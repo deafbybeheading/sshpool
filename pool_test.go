@@ -86,6 +86,26 @@ func configDial(t *testing.T, b *serverBehavior) net.Conn {
 	return c
 }
 
+func TestOpenThrottle(t *testing.T) {
+	throtDur := 1 * time.Second
+	throtChan := time.Tick(throtDur)
+	p := &Pool{Dial: func(net, addr string) (net.Conn, error) {
+		return dial(t), nil
+	}, Throttle: throtChan}
+	t0 := time.Now()
+	_, err := p.Open("net", "addr", clientConfig)
+	if err != nil {
+		t.Fatal("unexpected error:", err)
+	}
+	_, err = p.Open("net", "addr", clientConfig)
+	if err != nil {
+		t.Fatal("unexpected error:", err)
+	}
+	if dur := time.Since(t0); dur < throtDur {
+		t.Errorf("expected open throttled to %v; was not throttled", dur)
+	}
+}
+
 func TestOpenReuse(t *testing.T) {
 	c := 0
 	p := &Pool{Dial: func(net, addr string) (net.Conn, error) {

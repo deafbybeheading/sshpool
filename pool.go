@@ -26,6 +26,9 @@ type Pool struct {
 	// to enforce the timeout for new connections.
 	Timeout time.Duration
 
+	// Optionally throttle all Open actions to given channel
+	Throttle <- chan time.Time
+
 	tab map[string]*conn
 	mu  sync.Mutex
 }
@@ -37,6 +40,9 @@ var DefaultPool = new(Pool)
 // or if opening the session fails, Open attempts to dial a new
 // connection. If dialing fails, Open returns the error from Dial.
 func (p *Pool) Open(net, addr string, config *ssh.ClientConfig) (*ssh.Session, error) {
+	if p.Throttle != nil {
+		<- p.Throttle
+	}
 	var deadline, sessionDeadline time.Time
 	if p.Timeout > 0 {
 		now := time.Now()
